@@ -1,0 +1,12 @@
+fake_useragent
+selenium
+prawcore
+html2text
+requests
+timeago
+praw
+lxml
+psycopg2_binary
+ftfy
+beautifulsoup4
+psycopg2
