@@ -1,3 +1,4 @@
+import config/bot.py
 import praw
 from prawcore.exceptions import PrawcoreException
 import os
