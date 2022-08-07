@@ -10,3 +10,4 @@ psycopg2_binary
 ftfy
 beautifulsoup4
 psycopg2
+aiohttp

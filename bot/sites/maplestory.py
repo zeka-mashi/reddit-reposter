@@ -1,18 +1,20 @@
 from bs4 import BeautifulSoup
 import time
-import config.bot as bot
-from bot.components.database import Database
+import asyncio
 from bot.components.error import Error
 from bot.components.functions import Functions
 
-reddit = bot.Login.getReddit()
-site_url = 'http://maplestory.nexon.net/news'
-subreddit_name = 'Maplestory'
-
 
 class MapleStory:
-    def checkSite():
-        page_source = (bot.Session.getPage(site_url)).text
+    def __init__(self, bot, session, database):
+        self.site_url = 'http://maplestory.nexon.net/news'
+        self.subreddit_name = 'Maplestory'
+        self.bot = bot
+        self.session = session
+        self.database = database
+
+    async def checkSite(self):
+        page_source = asyncio.run(self.session.getPage(self.site_url))
         if page_source == False:  # handle error with page_source by exiting
             return
         try:
@@ -26,51 +28,51 @@ class MapleStory:
                 news_ID = str(url['href'])[str(url['href']).find('news/')+5:11]
                 maint_time = ''
                 try:
-                    id_list = Database.retrieve("ms1")
+                    id_list = self.database.retrieve('ms1')
                     if news_ID not in id_list:
                         if any(x in url.getText().lower() for x in ['scheduled maintenance', 'unscheduled maintenance',
                                                                     'game update', 'scheduled minor', 'unscheduled minor']):
                             try:
                                 maint_time = (news_divs.find('p')).getText()
-                                maint_time = " " + \
+                                maint_time = ' ' + \
                                     maint_time[maint_time.find(
                                         ' at ')+1:maint_time.find(').')+1]
                             except Exception as e:
-                                Error.msg(e, " at maintenance reading")
+                                Error.msg(e, ' at maintenance reading')
                                 maint_time = ''
-                        Database.insert("ms1", news_ID)
+                        self.database.insert('ms1', news_ID)
 
                         # check if already submitted
                         if str(label.getText()).lower() == "community" and any(x in url.getText().lower() for x in ['community contests', 'art corner', 'livestream', 'your maplestory']):
-                            news_submission = reddit.subreddit(bot.PRIVATE_SUB).submit(url.getText(
+                            news_submission = self.bot.reddit.subreddit(self.bot.PRIVATE_SUB).submit(url.getText(
                             ) + maint_time, url='http://maplestory.nexon.net' + url['href'], send_replies=False)
-                            reddit.submission(bot.BOT_LOG_POST).reply('Found r/' + subreddit_name + ' \'Community\' post  `' + url.getText(
+                            self.bot.reddit.submission(self.bot.BOT_LOG_POST).reply('Found r/' + self.subreddit_name + ' \'Community\' post  `' + url.getText(
                             ) + '`. Ignoring post and posting to private sub with id https://redd.it/{}'.format(news_submission.id))
                         else:
-                            already_posted = (bot.Session.getPage(
-                                'https://oauth.reddit.com/api/info.json?url=http://maplestory.nexon.net' + url['href'])).text
-                            if already_posted.count('"subreddit": "' + subreddit_name + '"') >= 1:
+                            already_posted = asyncio.run(self.session.getPage(
+                                'https://oauth.reddit.com/api/info.json?url=http://maplestory.nexon.net' + url['href']))
+                            if already_posted.count('"subreddit": "' + self.subreddit_name + '"') >= 1:
                                 # already posted
-                                news_submission = reddit.subreddit(bot.PRIVATE_SUB).submit(url.getText(
+                                news_submission = self.bot.reddit.subreddit(self.bot.PRIVATE_SUB).submit(url.getText(
                                 ) + maint_time, url='http://maplestory.nexon.net' + url['href'], send_replies=False)
-                                reddit.submission(bot.BOT_LOG_POST).reply('Found r/' + subreddit_name + ' news `' + url.getText(
+                                self.bot.reddit.submission(self.bot.BOT_LOG_POST).reply('Found r/' + self.subreddit_name + ' news `' + url.getText(
                                 ) + '` already posted... posting instead to private sub with id https://redd.it/{}'.format(news_submission.id))
                             else:
                                 # replace this config.private_sub after all good
-                                news_submission = reddit.subreddit(subreddit_name).submit(url.getText(
+                                news_submission = self.bot.reddit.subreddit(self.subreddit_name).submit(url.getText(
                                 ) + maint_time, url='http://maplestory.nexon.net' + url['href'], flair_id='a19e8bd0-b6c9-11e6-9867-0ea17315be16', send_replies=False)
-                                reddit.submission(bot.BOT_LOG_POST).reply('Found news `' + url.getText(
-                                ) + '` and posted to r/' + subreddit_name + ' with id https://redd.it/{}'.format(news_submission.id))
+                                self.bot.reddit.submission(self.bot.BOT_LOG_POST).reply('Found news `' + url.getText(
+                                ) + '` and posted to r/' + self.subreddit_name + ' with id https://redd.it/{}'.format(news_submission.id))
 
                                 # begin comment snippets
                                 if str(label.getText()).lower() == 'update':
                                     print(
-                                        subreddit_name + ' update post... ignoring comment reply')
+                                        self.subreddit_name + ' update post... ignoring comment reply')
                                     # do nothing!
                                 elif str(label.getText()).lower() == 'sale' and 'cash shop' in str(url.getText()).lower():
                                     news_desc = (news_divs.find('p')).getText()
-                                    content = (bot.Session.getPage(
-                                        'http://maplestory.nexon.net' + url['href'])).text
+                                    content = asyncio.run(self.session.getPage(
+                                        'http://maplestory.nexon.net' + url['href']))
                                     try:
                                         if 'DAILY DEALS' not in content:
                                             content_new = content[content.find(
@@ -140,7 +142,7 @@ class MapleStory:
                                             url['href'] + ')'
                                         time.sleep(1)
                                         news_reply = news_submission.reply(
-                                            '**' + url.getText() + '**\n>' + news_desc + '\n\nRundown of this cash shop update:\n***\n' + write_text + '\n***\n^(' + bot.BOT_FOOTER + ')')
+                                            '**' + url.getText() + '**\n>' + news_desc + '\n\nRundown of this cash shop update:\n***\n' + write_text + '\n***\n^(' + self.bot.BOT_FOOTER + ')')
                                         news_reply.disable_inbox_replies()
                                     except Exception as e:
                                         Error.msg(e, " at cash shop update")
@@ -148,8 +150,8 @@ class MapleStory:
                                     try:
                                         news_desc = (
                                             news_divs.find('p')).getText()
-                                        content = (bot.Session.getPage(
-                                            'http://maplestory.nexon.net' + url['href'])).text
+                                        content = asyncio.run(self.session.getPage(
+                                            'http://maplestory.nexon.net' + url['href']))
                                         content = content[content.find(
                                             '<!-- begin: article content -->'):content.find('<!-- end: article content -->')]
                                         content = content.replace(
@@ -185,17 +187,13 @@ class MapleStory:
                                                 url['href'] + ')'
                                         time.sleep(2)
                                         news_reply = news_submission.reply('**' + url.getText() + '**\n>' + news_desc + '\n\nPreview snippet:\n***\n' +
-                                                                           snip_text + '\n***\n^(' + bot.BOT_FOOTER + ')')
+                                                                           snip_text + '\n***\n^(' + self.bot.BOT_FOOTER + ')')
                                         news_reply.disable_inbox_replies()
                                     except Exception as e:
                                         Error.msg(
                                             e, " at bottom inner MapleStory")
                             already_posted = ''
-                            time.sleep(2)
-                    url = ''
-                    news_ID = ''
-                    maint_time = ''
-                    label = ''
+                            await asyncio.sleep(1)
                 except Exception as e:
                     Error.msg(e, " at bottom MapleStory")
         except Exception as e:

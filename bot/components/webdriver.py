@@ -1,19 +1,18 @@
 import os
 from bot.components.error import Error
-from config.bot import USERNAME, PASSWORD
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 
 class Webdriver:
-    def __init__(self, timeout):
+    def __init__(self, bot, timeout=7):
         self.timeout = timeout
+        self.bot = bot
+        self.current_url = None
+        self.driver = None
+        self.startDriver()
 
     def startDriver(self):
         print('Starting Google Chrome Webdriver...')
@@ -22,7 +21,7 @@ class Webdriver:
             chrome_exec_shim = os.environ.get(
                 "GOOGLE_CHROME_SHIM", "chromedriver")
             chrome_options.binary_location = chrome_exec_shim
-            userAgent = "script:reddit bot rescrape method by u/" + USERNAME
+            userAgent = "script:reddit bot rescrape method by u/" + self.bot.USERNAME
             chrome_options.add_argument(f'user-agent={userAgent}')
             chrome_options.add_argument('--headless')
             chrome_options.add_argument('--incognito')
@@ -32,24 +31,30 @@ class Webdriver:
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument("--disable-notifications")
             chrome_options.add_argument('--disable-dev-shm-usage')
-            driver = webdriver.Chrome(options=chrome_options)
-            driver.set_page_load_timeout(self.timeout)  # 7 seconds timeout
-            driver.get("https://old.reddit.com/login/")
-            current_url = driver.current_url
-            driver.find_element_by_id("user_login").send_keys(USERNAME)
-            driver.find_element_by_id("passwd_login").send_keys(PASSWORD)
-            driver.find_element_by_xpath('//button[text()="log in"]').click()
-            WebDriverWait(driver, 7).until(EC.url_changes(current_url))
-            current_url = driver.current_url
-            xpath_val = "//a[text()='" + USERNAME + "']"
-            driver.find_element_by_xpath(xpath_val).click()
-            WebDriverWait(driver, 5).until(EC.url_changes(current_url))
-            Webdriver.refreshWait()
+            self.driver = webdriver.Chrome(options=chrome_options)
+            self.driver.set_page_load_timeout(
+                self.timeout)  # 7 seconds timeout
+            self.driver.get("https://old.reddit.com/login/")
+            self.current_url = self.driver.current_url
+            self.driver.find_element_by_id(
+                "user_login").send_keys(self.bot.USERNAME)
+            self.driver.find_element_by_id(
+                "passwd_login").send_keys(self.bot.PASSWORD)
+            self.driver.find_element_by_xpath(
+                '//button[text()="log in"]').click()
+            WebDriverWait(self.driver, 7).until(
+                EC.url_changes(self.current_url))
+            self.current_url = self.driver.current_url
+            xpath_val = "//a[text()='" + self.bot.USERNAME + "']"
+            self.driver.find_element_by_xpath(xpath_val).click()
+            WebDriverWait(self.driver, 5).until(
+                EC.url_changes(self.current_url))
+            self.refreshWait()
             print("Finished!")
         except Exception as e:
             Error.msg(e)
 
     def refreshWait(self):
-        self.get('https://old.reddit.com/user/' +
-                 USERNAME + '/submitted/?sort=new')
-        WebDriverWait(self, 5).until(EC.url_changes(self.current_url))
+        self.driver.get('https://old.reddit.com/user/' +
+                        self.bot.USERNAME + '/submitted/?sort=new')
+        WebDriverWait(self.driver, 5).until(EC.url_changes(self.current_url))

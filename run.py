@@ -1,26 +1,37 @@
 import time
-import config.bot as bot
+import asyncio
+from config.bot import Bot
+from bot.components.session import Session
 from bot.components.database import Database
 from bot.components.webdriver import Webdriver
-from bot.components.functions import Functions
+#from bot.components.functions import Functions
 from bot.sites.maplestory import MapleStory
-from bot.sites.temtem import Temtem
+#from bot.sites.temtem import Temtem
 
 
 def main():
+    bot = Bot()
     print('[!] Initializing Reddit Bot\nBot version: ' + bot.BOT_VERSION +
           ' - Private Sub: ' + bot.PRIVATE_SUB + ' - Log Thread: ' + bot.BOT_LOG_POST)
-    Database.connect_to_db()
-    bot.Login()
-    bot.Session()
-    bot.Session.refreshBearerToken()
-    driver = Webdriver(timeout=7)
-    driver.startDriver()
-    print('Beginning bot loop...')
+    bot.login()
+    database = Database(bot.DATABASE_URL)
+    database.connect_to_db()
+    session = Session(bot)
+    asyncio.run(session.refreshBearerToken())
+    # driver = Webdriver(bot)  # default timeout in Webdriver is 7sec
+
+    print('[!] Initialization complete. Starting bot loop!')
     time_TBNL_last_checked = time.time()
     time_bearer_last_checked = time.time()
 
-    while True:
+    #sites = [MapleStory(bot, session, database)]
+
+    #loop = asyncio.get_event_loop()
+    # asyncio.ensure_future(function_asyc())
+    # asyncio.ensure_future(function_2())
+    # loop.run_forever()
+
+    """ while True:
         MapleStory.checkSite()
         Temtem.checkSite()
 
@@ -29,7 +40,7 @@ def main():
 
         # refresh bearer token // important for api/info.json check
         time_bearer_last_checked = Functions.bearerRefresh(
-            time_bearer_last_checked)
+            time_bearer_last_checked) """
 
 
 if __name__ == '__main__':
