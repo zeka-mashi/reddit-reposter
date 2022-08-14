@@ -30,7 +30,6 @@ class Session:
             async with session.post('https://www.reddit.com/api/v1/access_token', auth=self.client_auth, data=self.post_data, headers=self.ua_header) as resp:
                 if resp.status == 200:
                     response = await resp.json()
-                    print(response)
                     self.session_header = {
                         'Authorization': 'bearer ' + response['access_token'], 'User-Agent': 'Reddit session bot for api/info by u/' + self.bot.USERNAME}
                 else:

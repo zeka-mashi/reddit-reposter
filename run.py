@@ -4,7 +4,6 @@ from config.bot import Bot
 from bot.components.session import Session
 from bot.components.database import Database
 from bot.components.webdriver import Webdriver
-#from bot.components.functions import Functions
 from bot.sites.maplestory import MapleStory
 #from bot.sites.temtem import Temtem
 
@@ -26,10 +25,11 @@ def main():
 
     #sites = [MapleStory(bot, session, database)]
 
-    #loop = asyncio.get_event_loop()
-    # asyncio.ensure_future(function_asyc())
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    loop = asyncio.get_event_loop()
+    # asyncio.ensure_future(function_1())
     # asyncio.ensure_future(function_2())
-    # loop.run_forever()
+    loop.run_forever()
 
     """ while True:
         MapleStory.checkSite()
